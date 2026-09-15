@@ -20,9 +20,8 @@
 html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
 
 /* ── Video layer ──────────────────────────────────────────── */
-#video { display: none; }
-
-#video-bg {
+/* The webcam feed is the base layer (mirrored) */
+#video {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
