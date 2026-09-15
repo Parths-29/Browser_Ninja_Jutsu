@@ -42,6 +42,7 @@ export class GestureGate {
     }
 
     const entry = this.gestures.get(gestureName);
+    const prevState = entry.state;
 
     switch (entry.state) {
       case 'idle':
@@ -55,6 +56,7 @@ export class GestureGate {
         if (isDetected) {
           if (timestamp - entry.startTime >= this.holdMs) {
             entry.state = 'active';
+            // Fire ONCE on the transition into active
             this.onActivate(gestureName);
           }
         } else {
@@ -66,6 +68,7 @@ export class GestureGate {
         if (!isDetected) {
           entry.state = 'cooldown';
           entry.deactivateTime = timestamp;
+          // Fire ONCE on the transition out of active
           this.onDeactivate(gestureName);
         }
         break;
@@ -74,8 +77,6 @@ export class GestureGate {
         if (timestamp - entry.deactivateTime >= this.cooldownMs) {
           entry.state = 'idle';
         }
-        // If detected during cooldown, we ignore it until cooldown finishes,
-        // then it will flip to 'holding' on the next frame.
         break;
     }
 

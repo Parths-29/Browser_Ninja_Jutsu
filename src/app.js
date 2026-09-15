@@ -178,11 +178,8 @@ function drawClonesFrame() {
 
   const now = performance.now();
 
-  // Draw background video (mirrored)
-  cloneCtx.save();
-  cloneCtx.scale(-1, 1);
-  cloneCtx.drawImage(videoEl, -cloneCanvas.width, 0, cloneCanvas.width, cloneCanvas.height);
-  cloneCtx.restore();
+  // Draw background video — draw UNMIRRORED; CSS scaleX(-1) on the canvas handles the flip
+  cloneCtx.drawImage(videoEl, 0, 0, cloneCanvas.width, cloneCanvas.height);
 
   // Draw clones (sorted deepest first)
   const sorted = [...cloneDefs].sort((a, b) => b.delay - a.delay);
