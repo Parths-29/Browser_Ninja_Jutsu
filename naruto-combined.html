@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Naruto — Combined Ninja Powers</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: black; overflow: hidden; }
+
+    #video { display: none; }
+
+    #canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      object-fit: cover;
+      transform: scaleX(-1);
+      z-index: 2;
+    }
+
+    .fx {
+      position: absolute; height: auto; top: 0; left: 0;
+      transform: translate(-50%, -50%);
+      pointer-events: none; display: none;
+      mix-blend-mode: screen; z-index: 20;
+    }
+
+    #naruto-fx { width: 1600px; }
+    #sasuke-fx { width: 2400px; }
+  </style>
+</head>
+<body>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <video id="naruto-fx" class="fx" src="assets/naruto.mp4" muted autoplay loop playsinline></video>
+  <video id="sasuke-fx" class="fx" src="assets/sasuke.mp4" muted autoplay loop playsinline></video>
+
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+  <!-- MediaPipe -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+
+  <script>
+  // ============================================================
+  // DOM refs
+  // ============================================================
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const narutoFx = document.getElementById("naruto-fx");
+  const sasukeFx = document.getElementById("sasuke-fx");
+
+  // ============================================================
+  // Utility: map a normalized landmark point to screen pixel coords
+  // The canvas is mirrored (scaleX(-1)) and object-fit:cover,
+  // so we compute the actual rendered rect and map accordingly.
+  // ============================================================
+  function landmarkToScreen(lm) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width / canvas.width;
+    const scaleY = rect.height / canvas.height;
+    // Use lm.x directly — the canvas CSS scaleX(-1) already handles mirroring,
+    // so the effect follows the physical hand direction as the user expects.
+    const sx = rect.left + lm.x * canvas.width * scaleX;
+    const sy = rect.top + lm.y * canvas.height * scaleY;
+    return { x: sx, y: sy };
+  }
+
+  // ============================================================
+  // Hand open detection
+  // ============================================================
+  function checkOpen(lm) {
+    if (!lm || lm.length < 21) return false;
+    let count = 0;
+    const wrist = lm[0];
+    const tips = [8, 12, 16, 20];
+    const pips = [6, 10, 14, 18];
+    for (let i = 0; i < tips.length; i++) {
+      const tipDist = Math.hypot(lm[tips[i]].x - wrist.x, lm[tips[i]].y - wrist.y);
+      const pipDist = Math.hypot(lm[pips[i]].x - wrist.x, lm[pips[i]].y - wrist.y);
+      if (tipDist > pipDist) count++;
+    }
+    return count >= 3;
+  }
+
+  // ============================================================
+  // Rasengan & Chidori state
+  // ============================================================
+  let pwrRasengan = 0;
+  let pwrChidori = 0;
+  let wasOpenLeft = false;
+  let wasOpenRight = false;
+
+  function updateRasengan(leftHand) {
+    const open = leftHand ? checkOpen(leftHand) : false;
+    pwrRasengan += open ? 0.05 : -0.15;
+    pwrRasengan = Math.max(0, Math.min(1, pwrRasengan));
+
+    if (open && !wasOpenLeft) {
+      narutoFx.currentTime = 0;
+      narutoFx.play();
+    }
+    wasOpenLeft = open;
+
+    if (pwrRasengan > 0.01 && leftHand) {
+      // Use palm center: midpoint between wrist (0) and middle-finger MCP (9)
+      const wrist = leftHand[0];
+      const mcp = leftHand[9];
+      const palmCenter = { x: (wrist.x + mcp.x) / 2, y: (wrist.y + mcp.y) / 2 };
+      const screen = landmarkToScreen(palmCenter);
+      narutoFx.style.left = `${screen.x}px`;
+      narutoFx.style.top = `${screen.y}px`;
+      narutoFx.style.display = "block";
+      narutoFx.style.opacity = pwrRasengan;
+    } else {
+      narutoFx.style.display = "none";
+    }
+  }
+
+  function updateChidori(rightHand) {
+    const open = rightHand ? checkOpen(rightHand) : false;
+    pwrChidori += open ? 0.05 : -0.15;
+    pwrChidori = Math.max(0, Math.min(1, pwrChidori));
+
+    if (open && !wasOpenRight) {
+      sasukeFx.currentTime = 0;
+      sasukeFx.play();
+    }
+    wasOpenRight = open;
+
+    if (pwrChidori > 0.01 && rightHand) {
+      // Use palm center: midpoint between wrist (0) and middle-finger MCP (9)
+      const wrist = rightHand[0];
+      const mcp = rightHand[9];
+      const palmCenter = { x: (wrist.x + mcp.x) / 2, y: (wrist.y + mcp.y) / 2 };
+      const screen = landmarkToScreen(palmCenter);
+      sasukeFx.style.left = `${screen.x}px`;
+      sasukeFx.style.top = `${screen.y}px`;
+      sasukeFx.style.display = "block";
+      sasukeFx.style.opacity = pwrChidori;
+    } else {
+      sasukeFx.style.display = "none";
+    }
+  }
+
+  // ============================================================
+  // Gesture model (Shadow Clone trigger)
+  // ============================================================
+  let gestureModel = null;
+
+  async function loadGestureModel() {
+    try {
+      gestureModel = await tf.loadLayersModel("gesture-model.json");
+      console.log("Gesture model loaded");
+    } catch (e) {
+      console.error("Failed to load gesture model:", e);
+    }
+  }
+
+  function normalizeHand(lm) {
+    const w = lm[0];
+    const mcp = lm[9];
+    const scale =
+      Math.sqrt(
+        (mcp.x - w.x) ** 2 + (mcp.y - w.y) ** 2 + (mcp.z - w.z) ** 2
+      ) || 1;
+    const out = [];
+    for (let i = 0; i < 21; i++) {
+      out.push((lm[i].x - w.x) / scale);
+      out.push((lm[i].y - w.y) / scale);
+      out.push((lm[i].z - w.z) / scale);
+    }
+    return out;
+  }
+
+  function predictGesture(right, left, threshold = 0.999) {
+    if (!gestureModel || !right || !left) return false;
+    const input = tf.tensor2d([
+      [...normalizeHand(right), ...normalizeHand(left)],
+    ]);
+    const prob = gestureModel.predict(input).dataSync()[0];
+    input.dispose();
+    return prob > threshold;
+  }
+
+  loadGestureModel();
+
+  // ============================================================
+  // Clone state
+  // ============================================================
+  let clonesTriggered = false;
+  let cloneStartTime = null;
+
+  const customClones = [
+    { x: -100, y: 100, scale: 0.9,  delay: 1000, smokeSpawned: false },
+    { x:  120, y: 100, scale: 0.85, delay: 1150, smokeSpawned: false },
+    { x: -180, y: 140, scale: 0.8,  delay: 1300, smokeSpawned: false },
+    { x: -140, y: 140, scale: 0.45, delay: 1320, smokeSpawned: false },
+    { x:  180, y: 160, scale: 0.7,  delay: 1450, smokeSpawned: false },
+    { x:  140, y: 160, scale: 0.4,  delay: 1470, smokeSpawned: false },
+    { x: -250, y: 140, scale: 0.7,  delay: 1600, smokeSpawned: false },
+    { x: -220, y: 140, scale: 0.35, delay: 1620, smokeSpawned: false },
+    { x:  260, y: 160, scale: 0.65, delay: 1750, smokeSpawned: false },
+    { x: -100, y: 150, scale: 0.6,  delay: 2500, smokeSpawned: false },
+    { x:  100, y: 150, scale: 0.6,  delay: 2650, smokeSpawned: false },
+    { x: -120, y:  70, scale: 0.55, delay: 2800, smokeSpawned: false },
+    { x:  100, y:  70, scale: 0.5,  delay: 2950, smokeSpawned: false },
+    { x: -200, y:  85, scale: 0.55, delay: 3100, smokeSpawned: false },
+    { x:  230, y:  85, scale: 0.5,  delay: 3250, smokeSpawned: false },
+    { x: -280, y: 100, scale: 0.4,  delay: 3400, smokeSpawned: false },
+  ];
+
+  // ============================================================
+  // Person segmentation (for clones)
+  // ============================================================
+  function grabPerson() {
+    if (!mask) return null;
+    const offscreen = document.createElement("canvas");
+    offscreen.width = canvas.width;
+    offscreen.height = canvas.height;
+    const tempCtx = offscreen.getContext("2d");
+
+    tempCtx.save();
+    tempCtx.scale(-1, 1);
+    tempCtx.drawImage(mask, -canvas.width, 0, canvas.width, canvas.height);
+    tempCtx.restore();
+
+    tempCtx.globalCompositeOperation = "source-in";
+    tempCtx.save();
+    tempCtx.scale(-1, 1);
+    tempCtx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    tempCtx.restore();
+    tempCtx.globalCompositeOperation = "source-over";
+
+    return offscreen;
+  }
+
+  function drawClones(person) {
+    if (!person) return;
+    const now = performance.now();
+    const sorted = [...customClones].sort((a, b) => b.delay - a.delay);
+
+    sorted.forEach((cl) => {
+      if (now - cloneStartTime >= cl.delay) {
+        ctx.save();
+        ctx.translate(cl.x + canvas.width * (1 - cl.scale) / 2, cl.y);
+        ctx.scale(cl.scale, cl.scale);
+        ctx.drawImage(person, 0, 0);
+        ctx.restore();
+      }
+    });
+
+    ctx.drawImage(person, 0, 0);
+  }
+
+  // ============================================================
+  // Smoke sprites
+  // ============================================================
+  const SMOKE_FOLDERS = ["smoke_1", "smoke_2", "smoke_3"];
+  const SMOKE_FRAME_COUNT = 5;
+  const SMOKE_DURATION = 600;
+  const activeSmokes = [];
+
+  function spawnSmoke(x, y, scale) {
+    scale *= 1.2;
+    const folder =
+      SMOKE_FOLDERS[Math.floor(Math.random() * SMOKE_FOLDERS.length)];
+
+    const frames = [];
+    for (let i = 1; i <= SMOKE_FRAME_COUNT; i++) {
+      const img = new Image();
+      img.src = `assets/${folder}/${i}.png`;
+      frames.push(img);
+    }
+
+    activeSmokes.push({ x, y, scale, start: performance.now(), frames });
+  }
+
+  function drawSmokes() {
+    const now = performance.now();
+    for (let i = activeSmokes.length - 1; i >= 0; i--) {
+      const s = activeSmokes[i];
+      const elapsed = now - s.start;
+      const frameDuration = SMOKE_DURATION / SMOKE_FRAME_COUNT;
+      const frameIndex = Math.floor(elapsed / frameDuration);
+
+      if (frameIndex >= s.frames.length) {
+        activeSmokes.splice(i, 1);
+        continue;
+      }
+
+      const img = s.frames[frameIndex];
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.scale(s.scale, s.scale);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      ctx.restore();
+    }
+  }
+
+  // ============================================================
+  // Selfie Segmentation
+  // ============================================================
+  let mask = null;
+  const selfie = new SelfieSegmentation({
+    locateFile: (f) =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`,
+  });
+  selfie.setOptions({ modelSelection: 1 });
+  selfie.onResults((r) => (mask = r.segmentationMask));
+
+  // ============================================================
+  // Holistic
+  // ============================================================
+  const holistic = new Holistic({
+    locateFile: (f) =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${f}`,
+  });
+  holistic.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+  });
+
+  // ============================================================
+  // Main render loop
+  // ============================================================
+  holistic.onResults((res) => {
+    if (!mask) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw mirrored video background (clean, no overlays on canvas)
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    // Update rasengan (left hand) and chidori (right hand)
+    updateRasengan(res.leftHandLandmarks || null);
+    updateChidori(res.rightHandLandmarks || null);
+
+    // Fade effects when hands not detected
+    if (!res.leftHandLandmarks) {
+      pwrRasengan = Math.max(0, pwrRasengan - 0.15);
+      if (pwrRasengan > 0.01) {
+        narutoFx.style.display = "block";
+        narutoFx.style.opacity = pwrRasengan;
+      } else {
+        narutoFx.style.display = "none";
+      }
+      wasOpenLeft = false;
+    }
+    if (!res.rightHandLandmarks) {
+      pwrChidori = Math.max(0, pwrChidori - 0.15);
+      if (pwrChidori > 0.01) {
+        sasukeFx.style.display = "block";
+        sasukeFx.style.opacity = pwrChidori;
+      } else {
+        sasukeFx.style.display = "none";
+      }
+      wasOpenRight = false;
+    }
+
+    // Shadow Clone trigger + rendering
+    if (!clonesTriggered && gestureModel) {
+      if (predictGesture(res.rightHandLandmarks, res.leftHandLandmarks)) {
+        clonesTriggered = true;
+        cloneStartTime = performance.now();
+        console.log("CLONE TRIGGERED");
+      }
+    }
+
+    if (clonesTriggered) {
+      const now = performance.now();
+      customClones.forEach((cl) => {
+        if (!cl.smokeSpawned && now - cloneStartTime >= cl.delay) {
+          cl.smokeSpawned = true;
+          const centerX = cl.x + canvas.width / 2;
+          const centerY = cl.y + canvas.height / 2 - 40;
+          spawnSmoke(centerX - 15, centerY, cl.scale);
+          spawnSmoke(centerX + 15, centerY, cl.scale);
+        }
+      });
+      const person = grabPerson();
+      drawClones(person);
+      drawSmokes();
+    }
+  });
+
+  // ============================================================
+  // Camera
+  // ============================================================
+  const camera = new Camera(video, {
+    width: 640,
+    height: 480,
+    onFrame: async () => {
+      await selfie.send({ image: video });
+      await holistic.send({ image: video });
+    },
+  });
+  camera.start();
+
+  // ============================================================
+  // Reset on load
+  // ============================================================
+  window.onload = () => {
+    clonesTriggered = false;
+    cloneStartTime = null;
+    customClones.forEach((cl) => (cl.smokeSpawned = false));
+  };
+  </script>
+</body>
+</html>

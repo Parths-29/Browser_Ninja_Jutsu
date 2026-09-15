@@ -1,0 +1,279 @@
+/* app.css — Naruto Ninja Jutsu v2 */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap');
+
+/* ── Reset & base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --chakra-blue:   #00d4ff;
+  --chakra-glow:   rgba(0, 212, 255, 0.35);
+  --orange:        #f97316;
+  --orange-dim:    rgba(249, 115, 22, 0.18);
+  --surface:       rgba(8, 8, 16, 0.78);
+  --text:          #e4e4ec;
+  --muted:         #6b6b7b;
+  --border:        rgba(255,255,255,0.08);
+  --font:          'Outfit', system-ui, sans-serif;
+}
+
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+
+/* ── Video layer ──────────────────────────────────────────── */
+#video { display: none; }
+
+#video-bg {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  z-index: 0;
+}
+
+/* ── Canvas layers ────────────────────────────────────────── */
+/* Clone canvas: 2D canvas that draws person cutout + clones */
+#clone-canvas {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  transform: scaleX(-1);
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Skeleton overlay (hand wireframe) */
+#skeleton-canvas {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  transform: scaleX(-1);
+  object-fit: cover;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Three.js WebGL canvas (particle effects) */
+#gl-canvas {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Subtle vignette */
+#vignette {
+  position: fixed; inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+
+/* ── HUD container ────────────────────────────────────────── */
+#hud {
+  position: fixed; inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  font-family: var(--font);
+}
+
+/* ── Chakra meter ─────────────────────────────────────────── */
+#chakra-meter {
+  position: absolute;
+  left: 24px; top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.chakra-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--chakra-blue);
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  opacity: 0.75;
+}
+
+.chakra-track {
+  width: 10px;
+  height: 180px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-shadow: 0 0 12px rgba(0,212,255,0.1);
+}
+
+.chakra-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to top, #00ffe0, #00bfff);
+  border-radius: 999px;
+  transition: height 0.1s linear, background 0.4s ease;
+  box-shadow: 0 0 8px var(--chakra-glow);
+}
+
+/* ── Jutsu name flash ─────────────────────────────────────── */
+#jutsu-flash {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.04em;
+  text-shadow:
+    0 0 20px var(--orange),
+    0 0 50px var(--orange),
+    0 2px 4px rgba(0,0,0,0.9);
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+#jutsu-flash.fade-in {
+  opacity: 1;
+  animation: jutsu-flash-anim 2s ease forwards;
+}
+
+@keyframes jutsu-flash-anim {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.85); }
+  12%  { opacity: 1; transform: translateX(-50%) scale(1.05); }
+  30%  { opacity: 1; transform: translateX(-50%) scale(1); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
+}
+
+/* ── Combo progress ───────────────────────────────────────── */
+#combo-progress {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 16px;
+  backdrop-filter: blur(8px);
+  font-size: 1.1rem;
+}
+
+.combo-step {
+  opacity: 0.35;
+  font-size: 1.2rem;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.combo-step.done {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px var(--orange));
+  transform: scale(1.2);
+}
+
+.combo-arrow {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+/* ── FPS overlay ──────────────────────────────────────────── */
+#fps-overlay {
+  position: absolute;
+  top: 16px; right: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  backdrop-filter: blur(10px);
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace, var(--font);
+  color: var(--chakra-blue);
+  letter-spacing: 0.04em;
+  pointer-events: auto;
+}
+
+#fps-overlay span { display: block; }
+
+/* Clone confidence readout */
+#clone-confidence {
+  position: absolute;
+  top: 16px;
+  left: 60px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(249,115,22,0.8);
+  font-family: 'JetBrains Mono', monospace, var(--font);
+  letter-spacing: 0.04em;
+}
+
+/* ── Back button ──────────────────────────────────────────── */
+#back-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  backdrop-filter: blur(10px);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  font-family: var(--font);
+  transition: color 0.2s, border-color 0.2s;
+  pointer-events: auto;
+}
+
+#back-btn:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.2);
+}
+
+/* ── Gesture guide (bottom-right) ─────────────────────────── */
+#gesture-guide {
+  position: absolute;
+  bottom: 32px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-family: var(--font);
+}
+
+.guide-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  backdrop-filter: blur(8px);
+  color: var(--muted);
+}
+
+.guide-emoji { font-size: 1rem; }
+
+.guide-label { color: var(--text); font-weight: 600; }
+.guide-sub   { color: var(--muted); }

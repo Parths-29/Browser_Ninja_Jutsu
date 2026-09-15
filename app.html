@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ninja Jutsu v2 — Browser Ninja Jutsu</title>
+  <meta name="description" content="Real-time ninja jutsu effects powered by MediaPipe hand tracking, Three.js particles, and gesture recognition." />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+
+  <!-- Live webcam feed (invisible — just a source for MediaPipe) -->
+  <video id="video" autoplay playsinline></video>
+
+  <!-- Canvas layers (back to front) -->
+
+  <!-- Layer 1: Shadow clone person cutout rendered here -->
+  <canvas id="clone-canvas"></canvas>
+
+  <!-- Layer 2: Hand skeleton wireframe (2D canvas) -->
+  <canvas id="skeleton-canvas"></canvas>
+
+  <!-- Layer 3: Three.js particle effects (WebGL) -->
+  <canvas id="gl-canvas"></canvas>
+
+  <!-- Layer 4: Vignette -->
+  <div id="vignette"></div>
+
+  <!-- Layer 5: HUD (all DOM overlays) -->
+  <div id="hud">
+    <!-- Chakra meter, jutsu flash, combo progress, FPS injected by hud.js -->
+
+    <!-- Back to home -->
+    <a id="back-btn" href="index.html">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M10 4L6 8l4 4"/>
+      </svg>
+      Home
+    </a>
+
+    <!-- Clone confidence readout -->
+    <div id="clone-confidence"></div>
+
+    <!-- Gesture quick-reference guide -->
+    <div id="gesture-guide">
+      <div class="guide-row">
+        <span class="guide-emoji">🖐</span>
+        <span><span class="guide-label">Open Palm</span> <span class="guide-sub">L: Rasengan · R: Chidori</span></span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-emoji">✊</span>
+        <span><span class="guide-label">Fist</span> <span class="guide-sub">Chakra Shield</span></span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-emoji">✌</span>
+        <span><span class="guide-label">Peace</span> <span class="guide-sub">Fire Release</span></span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-emoji">☝</span>
+        <span><span class="guide-label">Point</span> <span class="guide-sub">Chakra Beam</span></span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-emoji">🤘</span>
+        <span><span class="guide-label">Rock</span> <span class="guide-sub">Combo input</span></span>
+      </div>
+      <div class="guide-row" style="border-color:rgba(249,115,22,0.25);margin-top:4px;">
+        <span class="guide-emoji">⌨️</span>
+        <span><span class="guide-label">F</span> <span class="guide-sub">Toggle FPS overlay</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CDN dependencies (must load before type=module scripts) ── -->
+
+  <!-- TensorFlow.js (for shadow clone TF.js model) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+  <!-- MediaPipe -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+
+  <!-- App entry point (ES module — imports Three.js from CDN, imports all src/ modules) -->
+  <script type="module" src="src/app.js"></script>
+
+</body>
+</html>
