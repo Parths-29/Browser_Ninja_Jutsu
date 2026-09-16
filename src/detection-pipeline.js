@@ -41,6 +41,7 @@ export class DetectionPipeline {
     this.particleEngine = opts.particleEngine;
     this.hud            = opts.hud;
     this.onCloneTrigger = opts.onCloneTrigger ?? (() => {});
+    this.silhouetteEngine = opts.silhouetteEngine ?? null;
 
     this.smoother = new LandmarkSmoother({ freq: 30, minCutoff: 1.0, beta: 0.007 });
     this.gate     = new GestureGate({ holdMs: 200, cooldownMs: 300 });
@@ -141,17 +142,11 @@ export class DetectionPipeline {
     // Sync effect positions to latest smoothed landmarks
     this._updateEffectPositions();
 
-    // Chakra drain count
-    const activeCount = this._activeEffects.size;
-    this.hud.tick(dt, activeCount);
+    // HUD tick (FPS counter, combo progress)
+    this.hud.tick(dt);
 
-    // If chakra depleted, force-deactivate all effects
-    if (this.hud.isDrained()) {
-      for (const effName of [...this._activeEffects]) {
-        this._deactivateEffect(effName, timestamp);
-        this.gate.forceDeactivate(effName, timestamp);
-      }
-    }
+    // Silhouette engine tick (shadow clone, chakra cloak, etc.)
+    if (this.silhouetteEngine) this.silhouetteEngine.tick();
 
     // Three.js particle render
     this.particleEngine.render();
@@ -260,8 +255,6 @@ export class DetectionPipeline {
   // ─────────────────────────────────────────────────────────────────────────
 
   _onGestureActivate(gateKey) {
-    if (this.hud.isDrained()) return;
-
     // Parse key
     if (gateKey === 'clone_sign') {
       this.hud.showJutsuName('👥 Shadow Clone Jutsu!');
@@ -309,7 +302,15 @@ export class DetectionPipeline {
   // ─────────────────────────────────────────────────────────────────────────
 
   _onCombo(combo) {
-    if (this.hud.isDrained()) return;
+    // Silhouette-driven combos are routed to the silhouette engine
+    if (combo.silhouette && this.silhouetteEngine) {
+      const method = this.silhouetteEngine[combo.silhouette];
+      if (method) method.call(this.silhouetteEngine);
+      this.hud.showJutsuName(combo.label);
+      console.log('[Combo]', combo.label);
+      return;
+    }
+
     const fx = this.effectsMap[combo.effect];
     if (fx) {
       fx.activate(window.innerWidth / 2, window.innerHeight / 2);

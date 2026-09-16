@@ -2,20 +2,12 @@
  * hud.js
  *
  * Manages all on-screen HUD overlays:
- *   - Chakra meter (depletes on use, refills over time)
  *   - Active jutsu flash label
  *   - Combo progress indicator
  *   - FPS / MediaPipe latency readout (toggle F key)
  */
 export class HUD {
   constructor(container) {
-    this.chakra    = 1.0;   // 0.0 - 1.0
-    this.maxChakra = 1.0;
-    this._locked   = false;  // true when chakra hits 0
-
-    this._drainRate  = 0.25;  // per second per active effect
-    this._refillRate = 0.08;  // per second when idle
-
     this._fpsVisible   = false;
     this._frameCount   = 0;
     this._lastFpsTime  = performance.now();
@@ -27,18 +19,6 @@ export class HUD {
   }
 
   _build(container) {
-    // ── Chakra meter ─────────────────────────────────────────────
-    const meter = document.createElement('div');
-    meter.id = 'chakra-meter';
-    meter.innerHTML = `
-      <div class="chakra-label">CHAKRA</div>
-      <div class="chakra-track">
-        <div id="chakra-fill" class="chakra-fill"></div>
-      </div>
-    `;
-    container.appendChild(meter);
-    this._fill = document.getElementById('chakra-fill');
-
     // ── Jutsu name flash ─────────────────────────────────────────
     const flash = document.createElement('div');
     flash.id = 'jutsu-flash';
@@ -82,9 +62,8 @@ export class HUD {
   /**
    * Called every render frame.
    * @param {number} dt - Delta time in seconds
-   * @param {number} activeEffectCount - How many effects are currently on
    */
-  tick(dt, activeEffectCount) {
+  tick(dt) {
     const now = performance.now();
 
     // ── FPS counter ───────────────────────────────────────────────
@@ -99,35 +78,11 @@ export class HUD {
         this._infVal.textContent = `${this._inferenceMs.toFixed(0)} ms`;
       }
     }
-
-    // ── Chakra drain / refill ─────────────────────────────────────
-    if (activeEffectCount > 0) {
-      this.chakra = Math.max(0, this.chakra - this._drainRate * activeEffectCount * dt);
-    } else {
-      this.chakra = Math.min(this.maxChakra, this.chakra + this._refillRate * dt);
-    }
-
-    // Unlock when chakra recovers to 20%
-    if (this._locked && this.chakra >= 0.20) {
-      this._locked = false;
-    }
-    if (!this._locked && this.chakra <= 0) {
-      this._locked = true;
-    }
-
-    // Update fill bar
-    const pct = (this.chakra * 100).toFixed(1);
-    this._fill.style.height = `${pct}%`;
-    this._fill.style.background = this.chakra > 0.4
-      ? `linear-gradient(to top, #00ffe0, #00bfff)`
-      : this.chakra > 0.15
-        ? `linear-gradient(to top, #ffcc00, #ff8800)`
-        : `linear-gradient(to top, #ff2200, #ff6600)`;
   }
 
-  /** Returns true if chakra is depleted (effects should suppress). */
+  /** No chakra gating — effects always allowed. */
   isDrained() {
-    return this._locked;
+    return false;
   }
 
   /** Flash a jutsu name on screen. */

@@ -51,6 +51,28 @@ export class ComboSystem {
         effect:    'shadow_clone',
         label:     '👥 Shadow Clone Jutsu!',
       },
+      // ── Silhouette-driven combos ──────────────────────────────────────
+      {
+        id:        'chakra_cloak',
+        sequence:  ['fist', 'fist', 'fist'],
+        timeoutMs: 3000,
+        silhouette: 'triggerChakraCloak',
+        label:     '🦊 Nine-Tails Chakra Mode!',
+      },
+      {
+        id:        'kawarimi',
+        sequence:  ['peace', 'peace', 'peace'],
+        timeoutMs: 3000,
+        silhouette: 'triggerKawarimi',
+        label:     '🪵 Substitution Jutsu!',
+      },
+      {
+        id:        'clone_swarm',
+        sequence:  ['rock', 'rock', 'fist'],
+        timeoutMs: 3000,
+        silhouette: 'triggerCloneSwarm',
+        label:     '👥 Shadow Clone Barrage!',
+      },
     ];
 
     /**
