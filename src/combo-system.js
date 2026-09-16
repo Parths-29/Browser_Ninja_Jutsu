@@ -61,7 +61,7 @@ export class ComboSystem {
       },
       {
         id:        'kawarimi',
-        sequence:  ['peace', 'peace', 'peace'],
+        sequence:  ['peace', 'peace'],
         timeoutMs: 3000,
         silhouette: 'triggerKawarimi',
         label:     '🪵 Substitution Jutsu!',
