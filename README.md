@@ -1,149 +1,130 @@
-[中文版](README_CN.md) | English
+# 🍥 Browser Ninja Jutsu
 
-# 🍥 Naruto — Browser-Based Ninja Jutsu
+Real-time ninja powers in your browser — powered by hand tracking, Three.js particle effects, and gesture recognition.
 
-Real-time hand tracking and gesture recognition web apps that let you unleash **Naruto** powers through your webcam.
+> Built by **Parth** · [github.com/Parths-29/Browser_Ninja_Jutsu](https://github.com/Parths-29/Browser_Ninja_Jutsu)
 
-## ✨ Apps
+---
 
-### 🔥 Combined Ninja Powers *(new)*
+## ✨ Features
 
-All three jutsu in one full-screen immersive view:
+### 🔮 Ninja Jutsu v2 *(main app — start here)*
 
-| Gesture | Effect |
-|---|---|
-| 🖐️ **Left hand open** | Naruto's Rasengan |
-| 🖐️ **Right hand open** | Sasuke's Chidori |
-| 🤏 **Trained hand sign** | Shadow clones with smoke effects |
+Five distinct hand poses mapped to live particle effects:
 
-- **Unified pipeline** — MediaPipe Holistic + Selfie Segmentation drive all three effects
-- **Simultaneous triggers** — all effects can be active at once
-- **Full-screen immersive** — no UI clutter, just the camera feed and jutsu overlays
-- **Gesture model included** — pre-trained model ships with the repo
+| Pose | Gesture | Effect |
+|------|---------|--------|
+| 🖐 Open Palm | ≥4 fingers extended | **Rasengan** (left) / **Chidori** (right) |
+| ✊ Fist | All fingers curled | **Chakra Shield** aura |
+| ✌ Peace / Victory | Index + Middle up | **Fire Release** |
+| ☝ Point | Index only | **Chakra Beam** |
+| 🤘 Rock / Horns | Index + Pinky up | Combo input |
 
-### 🌀 Ninja Powers
+**Combo sequences** — perform gestures in order to trigger rarer effects:
 
-| Gesture | Effect |
-|---|---|
-| 🖐️ **Left hand open** | Naruto's Rasengan |
-| 🖐️ **Right hand open** | Sasuke's Chidori |
+| Sequence | Combo |
+|----------|-------|
+| Fist → Peace → Open Palm | 🔥 Fire Style: Great Fireball Jutsu |
+| Point → Point → Fist | 🌀 Rasengan Barrage |
+| Rock → Fist → Open Palm | ⚡ Susano'o |
+| Peace → Rock → Peace | 👥 Shadow Clone Jutsu (alt trigger) |
 
-- **Real-time hand tracking** via [MediaPipe Hands](https://mediapipe.dev/)
-- **Mirrored camera** for natural interaction
-- **Screen-blend effects** — power animations composite naturally over the camera feed
-- **Fade in/out** — power intensity ramps up as you hold your hand open
+---
 
-### 👥 Shadow Clone Jutsu
+## 🛠 Technical Architecture
 
-| Action | Effect |
-|---|---|
-| 🤏 **Trained hand sign** | Shadow clones with smoke effects |
+```
+src/
+├── landmark-filter.js      One Euro Filter — removes MediaPipe jitter
+├── gesture-gate.js         Hold-duration gating (200ms hold, 300ms cooldown)
+├── finger-pose.js          Geometric 5-pose classifier (no ML, pure geometry)
+├── combo-system.js         Rolling gesture buffer + combo matching engine
+├── hud.js                  Chakra meter, jutsu flash, FPS overlay (F key)
+├── detection-pipeline.js   Core orchestrator (MediaPipe → smooth → classify → effect)
+├── app.js                  Entry point — bootstraps all subsystems
+└── effects/
+    ├── particle-engine.js  Three.js WebGL overlay renderer
+    ├── rasengan.js         700-particle blue spiral orb
+    ├── chidori.js          Crackling lightning bolts + 400 sparks
+    ├── fireball.js         500-particle fire burst with ember drift
+    ├── shield.js           Rotating hexagonal barrier ring
+    └── combo-effects.js    ChakraBeam + Susano'o aura
+```
 
-- **Gesture recognition** via a custom-trained TensorFlow.js neural network
-- **Selfie segmentation** to isolate your body from the background
-- **Smoke sprite animations** when clones spawn
-- **Model trainer** included — record your own hand sign and train the model in the browser
+### Stack
+- **MediaPipe Holistic** — hand + pose landmark detection
+- **Three.js** (via CDN) — WebGL particle effects with additive blending
+- **TensorFlow.js** — binary classifier for the Shadow Clone hand sign
+- **Zero build step** — pure CDN ES modules, serve with any HTTP server
+
+### Performance design
+- MediaPipe inference rate-limited to ~30 fps; rAF renders particles at display Hz
+- `SelfieSegmentation` is lazy — only spun up when Shadow Clone combo fires, torn down 8 s after
+- One Euro Filter on all 63 landmark coordinates per hand (adaptive: low jitter at rest, responsive during fast motion)
+- FPS + inference latency readout: press **F** to toggle
 
 ---
 
 ## 🚀 Quick Start
 
-All apps require a local HTTP server:
-
 ```bash
-# Start a server in the project root
+# Clone
+git clone https://github.com/Parths-29/Browser_Ninja_Jutsu.git
+cd Browser_Ninja_Jutsu
+
+# Serve (any static server works)
 python3 -m http.server 8080
-# or: npx serve -p 3000
+# or: npx serve -p 8080
 ```
 
-Then open:
+Open **http://localhost:8080** → click **"Ninja Jutsu v2"**
 
-| App | URL |
-|---|---|
-| Home | `http://localhost:8080` |
-| Combined | `http://localhost:8080/naruto-combined.html` |
-| Ninja Powers | `http://localhost:8080/ninja-powers.html` |
-| Shadow Clone | `http://localhost:8080/shadow-clone.html` |
-| Trainer | `http://localhost:8080/trainer.html` |
-
-**Requirements:** A modern browser (Chrome recommended) + webcam + good lighting.
-
----
-
-## 🎓 Training Your Own Gesture Model
-
-A pre-trained model is included. To train your own:
-
-1. Start the local server
-2. Open the trainer: `http://localhost:8080/trainer`
-3. Record samples of your chosen hand sign (both hands visible) — press **1**
-4. Record negative samples (random hand positions) — press **2**
-5. Click **Train Model**
-6. Save the model — replace `gesture-model.json` and `gesture-model.weights.bin` in the project root
+> **Requirements:** Chrome (recommended) · Webcam · Good lighting
 
 ---
 
 ## 🎮 Controls
 
-| Action | Effect |
-|---|---|
-| Open **left hand** (3+ fingers extended) | Rasengan |
-| Open **right hand** (3+ fingers extended) | Chidori |
-| Perform trained hand sign (both hands) | Shadow clones + smoke |
-| Close hand | Power fades out |
+| Action | Result |
+|--------|--------|
+| Open left hand | Rasengan |
+| Open right hand | Chidori |
+| Fist (either hand) | Chakra Shield |
+| Peace sign | Fire Release |
+| Point (one finger) | Chakra Beam |
+| Combo sequences | Mega effects (see table above) |
+| **F key** | Toggle FPS / latency overlay |
+| Trained hand sign (both hands) | Shadow Clone Jutsu |
 
 ---
 
-## 🛠️ Tech Stack
+## 🎓 Training Your Own Shadow Clone Sign
 
-| App | Technologies |
-|---|---|
-| Combined | TensorFlow.js, MediaPipe Holistic, Selfie Segmentation, Canvas API |
-| Ninja Powers | MediaPipe Hands, Canvas API, HTML5 Video |
-| Shadow Clone | TensorFlow.js, MediaPipe Holistic, Selfie Segmentation, Canvas API |
+The repo ships with a pre-trained binary classifier. To train your own:
 
-All dependencies loaded via [jsDelivr CDN](https://www.jsdelivr.com/) — zero install, no build step.
+1. Open `http://localhost:8080/trainer.html`
+2. Press **1** to record your hand sign (both hands visible)
+3. Press **2** to record negative poses
+4. Click **Train Model** → **Save Model**
+5. Replace `gesture-model.json` + `gesture-model.weights.bin`
 
 ---
 
-## 📁 Project Structure
+## 📁 Structure
 
 ```
-naruto/
-├── index.html                  # Landing page (i18n EN/中文)
-├── naruto-combined.html        # All three jutsu in one view
-├── ninja-powers.html           # Rasengan & Chidori hand tracking
-├── shadow-clone.html           # Shadow clone gesture recognition
-├── shadow-clone.js             # Clone rendering, gesture detection, smoke
-├── shadow-clone.css            # Shadow clone styling
-├── trainer.html                # Gesture model training UI
-├── trainer.js                  # Training logic & model definition
-├── trainer.css                 # Trainer page styling
-├── gesture-model.json          # Pre-trained gesture model (included)
-├── gesture-model.weights.bin   # Model weights (included)
-├── assets/
-│   ├── naruto.mp4              # Rasengan effect video
-│   ├── sasuke.mp4              # Chidori effect video
-│   ├── smoke_1/                # Smoke sprite frames (5 PNGs)
-│   ├── smoke_2/                # Smoke sprite frames (5 PNGs)
-│   ├── smoke_3/                # Smoke sprite frames (5 PNGs)
-│   ├── smoke_small_1/          # Small smoke sprites (5 PNGs)
-│   ├── state-1.png             # Overlay button (default)
-│   └── state-2.png             # Overlay button (triggered)
-├── .gitignore
-├── README.md
-├── README_CN.md
-└── LICENSE
+Browser_Ninja_Jutsu/
+├── index.html                  Landing page
+├── app.html                    Ninja Jutsu v2 (main unified app)
+├── app.css                     App styles + HUD
+├── src/                        All v2 modules (see above)
+├── ninja-powers.html           Original Rasengan + Chidori (kept)
+├── shadow-clone.html           Original Shadow Clone (kept)
+├── naruto-combined.html        Original combined view (kept)
+├── trainer.html / trainer.js   Gesture model trainer
+├── gesture-model.json          Pre-trained shadow clone model
+└── assets/                     Video effects + smoke sprites
 ```
-
----
-
-## ⚠️ Notes
-
-- All apps require an HTTP server — `python3 -m http.server 8080` is the simplest option
-- Chrome is recommended (Safari may glitch with MediaPipe Holistic)
-- Works best in well-lit environments with hands clearly visible
-- The pre-trained gesture model is included in the repo — no training required to try shadow clones
 
 ---
 
